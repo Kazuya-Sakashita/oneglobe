@@ -2,7 +2,7 @@ name: Sync GitHub Labels
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, develop ]
     paths:
       - ".github/labels.json"
       - ".github/workflows/sync-labels.yml"
@@ -25,39 +25,40 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-            const core = require('@actions/core');
+            const fs = require('fs')
 
-            const path = '.github/labels.json';
+            const path = '.github/labels.json'
             if (!fs.existsSync(path)) {
-              core.setFailed(`labels.json not found at ${path}`);
-              return;
+              core.setFailed(`labels.json not found at ${path}`)
+              return
             }
 
-            const desired = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const desired = JSON.parse(fs.readFileSync(path, 'utf8'))
             // normalize: name/color lower-case, trim description
             const norm = (l) => ({
               name: String(l.name),
               color: String(l.color || '').replace('#','').toLowerCase(),
               description: (l.description ?? '').toString().trim()
-            });
+            })
 
-            const desiredMap = new Map(desired.map(l => [l.name, norm(l)]));
+            const desiredMap = new Map(desired.map(l => [l.name, norm(l)]))
 
             // fetch all existing labels (paginate)
             const existing = await github.paginate(
               github.rest.issues.listLabelsForRepo,
               { owner: context.repo.owner, repo: context.repo.repo, per_page: 100 }
-            );
-            const existingMap = new Map(existing.map(l => [l.name, { name: l.name, color: l.color, description: l.description ?? '' }]));
+            )
+            const existingMap = new Map(
+              existing.map(l => [l.name, { name: l.name, color: l.color, description: l.description ?? '' }])
+            )
 
-            const dryRun = process.env.DRY_RUN === 'true';
+            const dryRun = process.env.DRY_RUN === 'true'
 
             // create or update
             for (const [name, want] of desiredMap.entries()) {
-              const has = existingMap.get(name);
+              const has = existingMap.get(name)
               if (!has) {
-                core.info(`Create: ${name}`);
+                core.info(`Create: ${name}`)
                 if (!dryRun) {
                   await github.rest.issues.createLabel({
                     owner: context.repo.owner,
@@ -65,49 +66,51 @@ jobs:
                     name: want.name,
                     color: want.color || 'ededed',
                     description: want.description
-                  });
+                  })
                 }
               } else {
                 const needsUpdate =
                   (want.color && want.color.toLowerCase() !== (has.color || '').toLowerCase()) ||
-                  (want.description !== (has.description || ''));
+                  (want.description !== (has.description || ''))
 
                 if (needsUpdate) {
-                  core.info(`Update: ${name}`);
+                  core.info(`Update: ${name}`)
                   if (!dryRun) {
                     await github.rest.issues.updateLabel({
                       owner: context.repo.owner,
                       repo: context.repo.repo,
-                      name: name,
+                      name,
                       new_name: name,
                       color: want.color || has.color || 'ededed',
                       description: want.description
-                    });
+                    })
                   }
                 } else {
-                  core.info(`No change: ${name}`);
+                  core.info(`No change: ${name}`)
                 }
               }
             }
 
             // delete labels that are not in labels.json
-            const allowDelete = process.env.ALLOW_DELETE === 'true';
+            const allowDelete = process.env.ALLOW_DELETE === 'true'
             if (allowDelete) {
               for (const [name] of existingMap.entries()) {
                 if (!desiredMap.has(name)) {
-                  core.info(`Delete: ${name}`);
+                  core.info(`Delete: ${name}`)
                   if (!dryRun) {
                     await github.rest.issues.deleteLabel({
                       owner: context.repo.owner,
                       repo: context.repo.repo,
                       name
-                    });
+                    })
                   }
                 }
               }
             } else {
-              core.info('Deletion skipped (set ALLOW_DELETE=true to enable).');
+              core.info('Deletion skipped (set ALLOW_DELETE=true to enable).')
             }
+
+            core.info('Sync complete ✅')
         env:
           # true でお試し（ログのみ）。デフォルトは false（実行）
           DRY_RUN: "false"
