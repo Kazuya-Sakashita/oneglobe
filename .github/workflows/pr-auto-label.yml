@@ -1,0 +1,74 @@
+name: PR Auto Label
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [ develop, main ]  # 開発が develop の場合はここを中心に
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label-by-files-and-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run labeler (by file paths)
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+          sync-labels: true
+
+      - name: Label by PR title / branch (type & priority)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title || '';
+            const branch = pr.head && pr.head.ref ? pr.head.ref : '';
+
+            // 付与したいラベルを集約
+            const labelsToAdd = new Set();
+
+            // ---- type:* を PRタイトルから（Conventional Commits 風）
+            // 例: feat: ..., fix: ..., chore: ..., docs: ..., refactor: ...
+            const lower = title.toLowerCase();
+            if (lower.startsWith('feat:') || lower.startsWith('feature:')) labelsToAdd.add('type:feature');
+            if (lower.startsWith('fix:')) labelsToAdd.add('type:bug');
+            if (lower.startsWith('chore:')) labelsToAdd.add('type:chore');
+            if (lower.startsWith('docs:')) labelsToAdd.add('type:docs');
+            if (lower.startsWith('refactor:')) labelsToAdd.add('type:chore');
+            if (lower.startsWith('test:')) labelsToAdd.add('type:chore');
+
+            // ---- priority:* をタイトル or ブランチ名から
+            // 例: [P0] ..., [P1] ..., [P2] ...  /  branch: feature/p0-..., hotfix/p1-...
+            const priFromTitle = /\[?(p[0-2])\]?/i.exec(title);
+            const priFromBranch = /\b(p[0-2])\b/i.exec(branch);
+            const toPriLabel = (p) => `priority:${p.toUpperCase()}`;
+
+            if (priFromTitle) labelsToAdd.add(toPriLabel(priFromTitle[1]));
+            else if (priFromBranch) labelsToAdd.add(toPriLabel(priFromBranch[1]));
+
+            // 何も追加がなければスキップ
+            if (labelsToAdd.size === 0) {
+              core.info('No labels to add from title/branch.');
+              return;
+            }
+
+            // すでに付いているラベルを取得して差分だけ追加
+            const existing = (pr.labels || []).map(l => l.name);
+            const final = [...labelsToAdd].filter(l => !existing.includes(l));
+
+            if (final.length === 0) {
+              core.info('All labels already present.');
+              return;
+            }
+
+            core.info(`Add labels: ${final.join(', ')}`);
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: final
+            });
