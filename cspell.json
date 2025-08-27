@@ -1,0 +1,50 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "useGitignore": true,
+  "allowCompoundWords": true,
+  "ignorePaths": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build",
+    "coverage",
+    "public",
+    "**/*.lock",
+    "**/*.svg",
+    "**/*.png",
+    "**/*.jpg",
+    "cspell.json"
+  ],
+  "dictionaries": [
+    "en_US",
+    "softwareTerms",
+    "node",
+    "typescript",
+    "html",
+    "css",
+    "fullstack",
+    "shell"
+  ],
+  "words": [
+    "shadcn",
+    "lucide",
+    "SWR",
+    "Prisma",
+    "Supabase",
+    "Upstash",
+    "ioredis",
+    "OneGlobe",
+    "ShiftB",
+    "oklch",
+    "Nextjs",
+    "JST",
+    "UTC"
+  ],
+  "overrides": [
+    { "filename": "**/*.{ts,tsx,js,md}", "language": "en,ja" }
+  ],
+  "ignoreRegExpList": [
+    "[\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Han}]+"  // 日本語は無視
+  ]
+}
