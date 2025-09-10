@@ -1,58 +1,75 @@
-# ファイルパスに基づいて自動ラベリング（PR）
-# actions/labeler が参照します
+# actions/labeler v5 schema
 
-# --- area 系 ---
 "area:setup":
-  - ".github/**"
-  - "package.json"
-  - "pnpm-lock.yaml"
-  - "yarn.lock"
-  - "tsconfig*.json"
-  - ".eslintrc*"
-  - ".prettierrc*"
-  - "next.config.*"
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "package.json"
+          - "pnpm-lock.yaml"
+          - "yarn.lock"
+          - "tsconfig*.json"
+          - ".eslintrc*"
+          - ".prettierrc*"
+          - "next.config.*"
 
 "area:auth":
-  - "src/app/(auth)/**"
-  - "src/app/api/auth/**"
-  - "src/app/api/session/**"
-  - "src/app/_lib/supabase/**"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app/(auth)/**"
+          - "src/app/api/auth/**"
+          - "src/app/api/session/**"
+          - "src/app/_lib/supabase/**"
 
 "area:db":
-  - "prisma/**"
-  - "src/app/_lib/prisma.ts"
-  - "src/app/_lib/db/**"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "prisma/**"
+          - "src/app/_lib/prisma.ts"
+          - "src/app/_lib/db/**"
 
 "area:rooms":
-  - "src/app/api/rooms/**"
-  - "src/app/(rooms)/**"
-  - "src/components/rooms/**"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app/api/rooms/**"
+          - "src/app/(rooms)/**"
+          - "src/components/rooms/**"
 
 "area:chat":
-  - "src/app/api/rooms/*/messages/**"
-  - "src/app/(chat)/**"
-  - "src/components/chat/**"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app/api/rooms/*/messages/**"
+          - "src/app/(chat)/**"
+          - "src/components/chat/**"
 
 "area:i18n":
-  - "src/i18n/**"
-  - "src/locales/**"
-  - "locales/**"
-  - "**/*i18n*.{ts,tsx,js}"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/i18n/**"
+          - "src/locales/**"
+          - "locales/**"
+          - "**/*i18n*.ts"
+          - "**/*i18n*.tsx"
+          - "**/*i18n*.js"
 
 "area:realtime":
-  - "src/app/_lib/redis.ts"
-  - "src/app/_lib/realtime/**"
-  - "src/app/api/realtime/**"
-  - "src/app/**/socket/**"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app/_lib/redis.ts"
+          - "src/app/_lib/realtime/**"
+          - "src/app/api/realtime/**"
+          - "src/app/**/socket/**"
 
 "area:design-system":
-  - "src/components/ui/**"
-  - "src/styles/**"
-  - "src/tokens/**"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/components/ui/**"
+          - "src/styles/**"
+          - "src/tokens/**"
 
-# --- docs 系 ---
 "type:docs":
-  - "README.md"
-  - "docs/**"
-  - "**/*.md"
-  - "**/*.mdx"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "README.md"
+          - "docs/**"
+          - "**/*.md"
+          - "**/*.mdx"
