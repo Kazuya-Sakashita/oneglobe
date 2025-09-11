@@ -1,0 +1,13 @@
+{
+  "app": {
+    "name": "OneGlobe",
+    "tagline": "ひとつの世界、ひとつの会話。"
+  },
+  "nav": { "rooms": "ルーム", "settings": "設定" },
+  "auth": { "login": "ログイン", "logout": "ログアウト" },
+  "chat": { "send": "送信", "typing": "{name} さんが入力中..." },
+  "settings": {
+    "language": "言語",
+    "languageNote": "国旗は使わず言語名＋コードで表示"
+  }
+}
