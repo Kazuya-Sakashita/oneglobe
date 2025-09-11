@@ -1,0 +1,22 @@
+:root {
+  /* Colors */
+  --color-brand-primary: #2563eb;
+  --color-brand-secondary: #14b8a6;
+  --color-accent: #22c55e;
+  --color-warning: #f59e0b;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-bg: #ffffff;
+  --color-surface: #f6f8fb;
+  --color-border: #e2e8f0;
+
+  /* Radius */
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Shadow */
+  --shadow-sm: 0 2px 10px rgba(15, 23, 42, 0.06);
+
+  /* Typography */
+  --font-sans: 'Inter', 'Noto Sans JP', sans-serif;
+}

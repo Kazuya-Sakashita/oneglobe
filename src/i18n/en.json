@@ -1,0 +1,13 @@
+{
+  "app": {
+    "name": "OneGlobe",
+    "tagline": "One world, one conversation."
+  },
+  "nav": { "rooms": "Rooms", "settings": "Settings" },
+  "auth": { "login": "Log in", "logout": "Log out" },
+  "chat": { "send": "Send", "typing": "{name} is typing..." },
+  "settings": {
+    "language": "Language",
+    "languageNote": "No flags; show language name + ISO code"
+  }
+}
