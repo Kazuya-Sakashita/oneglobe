@@ -1,0 +1,66 @@
+{
+  // ---- Tailwind v4 / PostCSS の警告を黙らせつつ補完は有効に ----
+  "css.lint.unknownAtRules": "ignore",
+  "tailwindCSS.validate": true,
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "editor.renderWhitespace": "all",
+  "editor.renderControlCharacters": true,
+
+  // ---- cSpell: 英日対応＋プロジェクト語彙＆誤分割トークンを無視 ----
+  "cSpell.language": "en,ja",
+
+  // プロジェクト固有の単語は “辞書登録”（正常な単語）
+  "cSpell.words": [
+    "OneGlobe",
+    "Supabase",
+    "sonner",
+    "SWR",
+    "rtlLocales",
+    "NextRequest",
+    "NextResponse",
+    "RoomInvite",
+    "gen_random_uuid",
+    "gen_random_uuid"
+  ],
+
+  // 誤検知されやすい“断片トークン”は “ignoreWords” で無視
+  // （ゼロ幅スペース混入時などに Effect/Element/allowed/resolve/include/exclude が分割されるため）
+  "cSpell.ignoreWords": [
+    "useEffect",
+    "FormEvent",
+    "HTMLElement",
+    "includes",
+    "remove",
+    "allowed",
+    "resolve",
+    "include",
+    "exclude",
+    "Effe",
+    "Eleme",
+    "llowed",
+    "olve",
+    "lude",
+    "Obje",
+    "meou",
+    "emove",
+    "eque",
+    "olde"
+  ],
+
+  // そもそもチェック不要な場所はスキップ
+  "cSpell.ignorePaths": [
+    "node_modules/**",
+    ".next/**",
+    "dist/**",
+    "build/**",
+    ".git/**"
+  ]
+
+  // 必要に応じて: 警告を弱めたいなら次を追加
+  // "cSpell.diagnosticLevel": "Hint"
+}

@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// cspell:ignore RoomMember RoomInvite gen_random_uuid emoji
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -10,6 +7,137 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+//// ─────────────────────────────
+//// Core Models
+//// ─────────────────────────────
+
+/// プロフィール（auth.users と 1:1 / PK = user_id）
+model Profile {
+  /// auth.users.id を格納（UUID）。DB外部キーは張らない（アプリで整合性担保）
+  userId    String   @id @map("user_id") @db.Uuid
+  email     String?  @unique
+  nickname  String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // relations（反対側に対応するフィールドを追加）
+  memberships RoomMember[]
+  messages    Message[]    @relation("ProfileMessages")
+  reactions   Reaction[]   @relation("ProfileReactions")
+  invitesSent RoomInvite[] @relation("ProfileInvites")
+  roomsOwned  Room[]       @relation("ProfileOwnerRooms")
+
+  @@map("profiles")
+}
+
+/// ルーム
+model Room {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  isPrivate Boolean  @default(false) @map("is_private")
+  ownerId   String   @map("owner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Profile との 1:N（オーナー）
+  owner Profile @relation("ProfileOwnerRooms", fields: [ownerId], references: [userId])
+
+  members  RoomMember[]
+  messages Message[]
+  invites  RoomInvite[]
+
+  @@index([ownerId])
+  @@map("rooms")
+}
+
+/// メンバーシップ（複合PK）
+model RoomMember {
+  roomId   String   @map("room_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  role     RoomRole @default(MEMBER)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  room Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user Profile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([roomId, userId])
+  @@map("room_members")
+}
+
+enum RoomRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+/// メッセージ
+model Message {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roomId    String    @map("room_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  body      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  editedAt  DateTime? @map("edited_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  room        Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  author      Profile      @relation("ProfileMessages", fields: [userId], references: [userId], onDelete: Cascade)
+  attachments Attachment[]
+  reactions   Reaction[]
+
+  @@index([roomId, createdAt])
+  @@map("messages")
+}
+
+/// 添付ファイル
+model Attachment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  url       String
+  mimeType  String   @map("mime_type")
+  size      Int?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("attachments")
+}
+
+/// リアクション（複合PK）
+model Reaction {
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    Profile @relation("ProfileReactions", fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([messageId, userId, emoji])
+  @@map("reactions")
+}
+
+/// 招待（トークンユニーク）
+model RoomInvite {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roomId       String    @map("room_id") @db.Uuid
+  inviterId    String    @map("inviter_id") @db.Uuid
+  inviteeEmail String    @map("invitee_email")
+  token        String    @unique
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  acceptedAt   DateTime? @map("accepted_at")
+
+  room    Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  inviter Profile @relation("ProfileInvites", fields: [inviterId], references: [userId])
+
+  @@index([roomId])
+  @@map("room_invites")
 }
