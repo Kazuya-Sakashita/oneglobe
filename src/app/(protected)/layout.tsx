@@ -1,21 +1,18 @@
 // src/app/(protected)/layout.tsx
-import { ReactNode } from "react"
 import { redirect } from "next/navigation"
-import { supabaseServer } from "@/lib/supabase/server"
-import { ClientAuthGate } from "@/components/auth/client-auth-gate"
+import { supabaseRsc } from "@/lib/supabase/rsc"
 
-export default async function ProtectedLayout({ children }: { children: ReactNode }) {
-  const supabase = await supabaseServer()
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+export const fetchCache = "force-no-store"
+
+export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await supabaseRsc()
   const { data } = await supabase.auth.getUser()
-  if (!data.user) {
-    redirect("/login")
+
+  if (!data?.user) {
+    redirect("/login?next=/rooms") // ここで NEXT_REDIRECT を投げる（OK）
   }
 
-  // SSRで通してから、クライアント側でもログアウト検知して即時リダイレクト
-  return (
-    <>
-      <ClientAuthGate />
-      {children}
-    </>
-  )
+  return <>{children}</>
 }

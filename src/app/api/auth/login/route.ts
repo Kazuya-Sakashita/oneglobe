@@ -1,7 +1,11 @@
 // src/app/api/auth/login/route.ts
-/* cspell:ignore NextRequest NextResponse eque */
+/* cspell:ignore NextRequest NextResponse */
 import { NextRequest, NextResponse } from "next/server"
-import { supabaseServer } from "@/lib/supabase/server"
+import { supabaseRoute } from "@/lib/supabase/route"
+
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+export const fetchCache = "force-no-store"
 
 const maskEmail = (e?: string | null) =>
   e ? e.replace(/(^.).*(@.*$)/, (_m, a, b) => `${a}***${b}`) : null
@@ -9,12 +13,10 @@ const maskEmail = (e?: string | null) =>
 export async function POST(req: NextRequest) {
   const startedAt = Date.now()
 
-  // リクエストボディ取得（不正JSONは 400）
   let body: any = {}
   try {
     body = await req.json()
   } catch {
-    console.error("[/api/auth/login] invalid json body")
     return NextResponse.json({ error: "invalid json body" }, { status: 400 })
   }
 
@@ -24,7 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const supabase = await supabaseServer()
+    const { supabase, applyCookies } = supabaseRoute(req)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     const took = Date.now() - startedAt
 
@@ -33,26 +35,20 @@ export async function POST(req: NextRequest) {
       const message = error?.message ?? "ログインに失敗しました"
       const status = message.toLowerCase().includes("email not confirmed") ? 403 : 401
 
-      // サーバ側ログ（メールはマスク）
-      console.error("[/api/auth/login] FAIL", {
-        email: maskEmail(email),
-        code,
-        message,
-        tookMs: took,
-      })
-
-      // クライアントにも詳細を返す（本番は dev フィールドを抑制）
-      return NextResponse.json(
+      const res = NextResponse.json(
         {
           error: message,
           code,
-          dev:
-            process.env.NODE_ENV !== "production"
-              ? { tookMs: took, emailMasked: maskEmail(email) }
-              : undefined,
+          dev: process.env.NODE_ENV !== "production"
+            ? { tookMs: took, emailMasked: maskEmail(email) }
+            : undefined,
         },
         { status },
       )
+      applyCookies(res) // ★ 失敗時も適用
+      res.headers.set("Cache-Control", "no-store")
+      res.headers.set("Vary", "Cookie")
+      return res
     }
 
     const u = data.user
@@ -65,16 +61,16 @@ export async function POST(req: NextRequest) {
       tookMs: Date.now() - startedAt,
     })
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       { user: { id: u.id, email: u.email, nickname, avatarUrl } },
       { status: 200 },
     )
+    applyCookies(res) // ★ 成功時も適用
+    res.headers.set("Cache-Control", "no-store")
+    res.headers.set("Vary", "Cookie")
+    return res
   } catch (e: any) {
-    // 予期しない例外
-    console.error("[/api/auth/login] EXCEPTION", {
-      email: maskEmail(email),
-      message: e?.message,
-    })
+    console.error("[/api/auth/login] EXCEPTION", { email: maskEmail(email), message: e?.message })
     return NextResponse.json(
       { error: e?.message ?? "unexpected error", code: "EXCEPTION" },
       { status: 500 },
