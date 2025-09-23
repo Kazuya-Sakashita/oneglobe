@@ -1,8 +1,9 @@
-"use client"
+// src/app/login/page.tsx
+'use client'
 
-import { useMemo, useState } from "react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { LoginForm } from "@/components/auth/login-form"
+import { useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { LoginForm } from '@/components/auth/login-form'
 
 type SubmitResult = { ok: true } | { ok: false; message: string; code?: string }
 
@@ -11,15 +12,18 @@ export default function LoginPage() {
   const pathname = usePathname()
   const q = useSearchParams()
 
-  // next=? が無効なら /rooms。ロケール前置きの考慮（/ja/login → /ja/rooms）
-  const finalNext = useMemo(() => {
-    const nextQ = q.get("next")
-    if (nextQ && nextQ.startsWith("/")) return nextQ
-    // pathname が /ja/login のようなとき、先頭セグメントをロケールとして流用
-    const m = /^\/([a-zA-Z-]+)(\/|$)/.exec(pathname || "")
-    const locale = m?.[1]
-    return locale && locale.length <= 5 ? `/${locale}/rooms` : "/rooms"
-  }, [q, pathname])
+  // next=? の安全な決定（/ で始まるものだけ許可、ロケール前置きも考慮）
+const SUPPORTED_LOCALES = ['ja', 'en'] as const
+
+const finalNext = useMemo(() => {
+  const nextQ = q.get('next')
+  if (nextQ && nextQ.startsWith('/')) {
+    return nextQ.replace(/\/{2,}/g, '/')
+  }
+  const seg = (pathname || '').split('/').filter(Boolean)[0] // 先頭セグメント
+  const locale = seg && SUPPORTED_LOCALES.includes(seg as any) ? seg : null
+  return locale ? `/${locale}/rooms` : '/rooms'
+}, [q, pathname])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -35,15 +39,18 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      console.log("[LOGIN] start", { emailMasked: email.replace(/(^.).*(@.*$)/, (_m, a, b) => `${a}***${b}`) })
+      // マスクしてログに残す
+      const emailMasked = email.replace(/(^.).*(@.*$)/, (_m, a, b) => `${a}***${b}`)
+      console.log('[LOGIN] start', { emailMasked })
 
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
-        // 重要: 認証系は no-store を明示的に（App Router は基本OKだが保険）
+        cache: 'no-store', // 認証系はHTTPキャッシュ回避
       })
 
+      // JSON/テキストどちらでも耐える
       const text = await res.text()
       let json: any = null
       try {
@@ -53,31 +60,26 @@ export default function LoginPage() {
       }
 
       if (!res.ok) {
-        const message = json?.error || text || "ログインに失敗しました"
-        console.error("[LOGIN] fail", { status: res.status, body: json || text })
+        const message = json?.error || text || 'ログインに失敗しました'
+        console.error('[LOGIN] fail', { status: res.status, body: json || text })
         setError(message)
         return { ok: false, message }
       }
 
-      console.log("[LOGIN] ok -> navigating", { finalNext, setCookie: res.headers.get("set-cookie") ? "present" : "unknown" })
+      console.log('[LOGIN] ok -> navigating', {
+        finalNext,
+        // サーバが Set-Cookie を返したかのヒント（ブラウザではヘッダを見られないこともある）
+        setCookieHeaderPresentHint: res.headers.get('set-cookie') ? 'present' : 'n/a',
+      })
 
-      // まず置き換えでページ遷移
+      // 置き換え遷移 → 直後にRSC/SWR再検証
       router.replace(finalNext)
-      // 直後に再検証（RSC/SWR の最新化）
       router.refresh()
-
-      // 念のため、少し待っても /login にいる場合はフルリロードで押し切る
-      setTimeout(() => {
-        if (window.location.pathname.includes("/login")) {
-          console.warn("[LOGIN] still on /login, forcing hard navigation", { finalNext })
-          window.location.assign(finalNext)
-        }
-      }, 600)
 
       return { ok: true }
     } catch (e: any) {
-      const message = e?.message || "ネットワークエラー"
-      console.error("[LOGIN] exception", e)
+      const message = e?.message || 'ネットワークエラー'
+      console.error('[LOGIN] exception', e)
       setError(message)
       return { ok: false, message }
     } finally {
@@ -90,10 +92,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6 border p-6 rounded-xl bg-card text-card-foreground">
         <h1 className="text-xl font-bold">ログイン</h1>
         <LoginForm onSubmit={handleLogin} loading={loading} error={error} />
-        {/* デバッグ表示（必要なら残す） */}
-        <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
-          next = {finalNext}
-        </pre>
+        {/* 開発時の確認用（不要なら削除可） */}
+        <pre className="text-xs text-muted-foreground whitespace-pre-wrap">next = {finalNext}</pre>
       </div>
     </main>
   )

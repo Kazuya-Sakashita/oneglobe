@@ -1,17 +1,27 @@
 // src/app/(protected)/layout.tsx
 import { redirect } from "next/navigation"
-import { supabaseRsc } from "@/lib/supabase/rsc"
+import { headers } from "next/headers"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
-export const revalidate = 0
-export const fetchCache = "force-no-store"
+
+const SUPPORTED_LOCALES = ["ja", "en"] as const
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await supabaseRsc()
-  const { data } = await supabase.auth.getUser()
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!data?.user) {
-    redirect("/login?next=/rooms") // ここで NEXT_REDIRECT を投げる（OK）
+  if (!user) {
+    const h = await headers()
+    const currentPath = h.get("x-pathname") ?? "/"
+    const seg = currentPath.split("/").filter(Boolean)[0] ?? ""
+    const locale = (SUPPORTED_LOCALES as readonly string[]).includes(seg) ? seg : null
+
+    const loginPath = locale ? `/${locale}/login` : "/login"
+    const fallbackNext = locale ? `/${locale}/rooms` : "/rooms"
+    const nextParam = encodeURIComponent(currentPath || fallbackNext)
+
+    redirect(`${loginPath}?next=${nextParam}`)
   }
 
   return <>{children}</>
