@@ -1,3 +1,5 @@
+/* cspell:ignore Obje lude rtlLocales */
+
 import { notFound } from 'next/navigation';
 import I18nProvider from '@/components/I18nProvider';
 import HtmlLangSync from '@/components/HtmlLangSync';
