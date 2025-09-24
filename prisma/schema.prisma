@@ -1,9 +1,7 @@
-// cspell:ignore RoomMember RoomInvite gen_random_uuid emoji
-
+// cspell:ignore RoomMember RoomInvite gen_random_uuid emoji membe Membe MEMBE emoj
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -26,7 +24,7 @@ model Profile {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // relations（反対側に対応するフィールドを追加）
+  // relations
   memberships RoomMember[]
   messages    Message[]    @relation("ProfileMessages")
   reactions   Reaction[]   @relation("ProfileReactions")
@@ -38,7 +36,7 @@ model Profile {
 
 /// ルーム
 model Room {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
   name      String
   isPrivate Boolean  @default(false) @map("is_private")
   ownerId   String   @map("owner_id") @db.Uuid
@@ -46,8 +44,7 @@ model Room {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Profile との 1:N（オーナー）
-  owner Profile @relation("ProfileOwnerRooms", fields: [ownerId], references: [userId])
-
+  owner    Profile      @relation("ProfileOwnerRooms", fields: [ownerId], references: [userId])
   members  RoomMember[]
   messages Message[]
   invites  RoomInvite[]
@@ -67,6 +64,8 @@ model RoomMember {
   user Profile @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@id([roomId, userId])
+  @@index([userId])
+  @@index([roomId])
   @@map("room_members")
 }
 
@@ -78,26 +77,30 @@ enum RoomRole {
 
 /// メッセージ
 model Message {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String    @id @default(uuid()) @db.Uuid
   roomId    String    @map("room_id") @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
+  // 履歴保持のため nullable（退会ユーザーの投稿を残す）
+  userId    String?   @map("user_id") @db.Uuid
   body      String
   createdAt DateTime  @default(now()) @map("created_at")
   editedAt  DateTime? @map("edited_at")
   deletedAt DateTime? @map("deleted_at")
 
-  room        Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  author      Profile      @relation("ProfileMessages", fields: [userId], references: [userId], onDelete: Cascade)
+  room   Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  // userId が optional なので、relation 側も optional（?）にする
+  author Profile? @relation("ProfileMessages", fields: [userId], references: [userId], onDelete: SetNull)
+
   attachments Attachment[]
   reactions   Reaction[]
 
-  @@index([roomId, createdAt])
+  @@index([roomId, createdAt]) // 部屋内の時系列取得
+  @@index([userId, createdAt]) // ユーザー別の時系列取得（退会処理などのバッチにも有効）
   @@map("messages")
 }
 
 /// 添付ファイル
 model Attachment {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
   messageId String   @map("message_id") @db.Uuid
   url       String
   mimeType  String   @map("mime_type")
@@ -121,12 +124,13 @@ model Reaction {
   user    Profile @relation("ProfileReactions", fields: [userId], references: [userId], onDelete: Cascade)
 
   @@id([messageId, userId, emoji])
+  @@index([messageId])
   @@map("reactions")
 }
 
 /// 招待（トークンユニーク）
 model RoomInvite {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id           String    @id @default(uuid()) @db.Uuid
   roomId       String    @map("room_id") @db.Uuid
   inviterId    String    @map("inviter_id") @db.Uuid
   inviteeEmail String    @map("invitee_email")
